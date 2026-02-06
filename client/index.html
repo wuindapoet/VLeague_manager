@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V-LEAGUE MANAGER | SE104</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%2310b981' font-weight='bold'>V</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f0fdf4; } /* Emerald-50 */
+    .glass-emerald { background: rgba(16, 185, 129, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(16, 185, 129, 0.1); }
+    
+    /* Standardized Print Styles for BM forms */
+    @media print {
+      body * { visibility: hidden; background: white !important; color: black !important; }
+      #print-section, #print-section * { visibility: visible; }
+      #print-section { position: absolute; left: 0; top: 0; width: 100%; padding: 30px; }
+      .no-print { display: none !important; }
+      
+      .bm-header { border: 2px solid black; background: #064e3b !important; color: white !important; font-weight: bold; padding: 4px 12px; display: inline-block; }
+      .bm-title { border: 2px solid black; flex: 1; text-align: center; font-weight: bold; padding: 4px; text-transform: uppercase; font-size: 18px; }
+      .bm-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+      .bm-table th, .bm-table td { border: 1px solid black; padding: 8px; text-align: left; font-size: 13px; }
+      .bm-table th { background: #f0fdf4 !important; font-weight: bold; text-align: center; }
+    }
+
+    /* Form animations */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    .animate-shake { animation: shake 0.4s ease-in-out; }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "react/": "https://esm.sh/react@^19.2.4/",
+      "react": "https://esm.sh/react@^19.2.4",
+      "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+      "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+      "@google/genai": "https://esm.sh/@google/genai@^0.21.0"
+    }
+  }
+  </script>
+<link rel="stylesheet" href="/src/global.css">
+</head>
+<body class="selection:bg-emerald-200 selection:text-emerald-900">
+  <div id="root"></div>
+  <!-- Print Container -->
+  <div id="print-section" class="hidden print:block"></div>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
