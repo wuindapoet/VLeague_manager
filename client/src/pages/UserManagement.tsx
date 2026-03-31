@@ -22,15 +22,26 @@ const UserManagementPage: React.FC<UserManagementProps> = ({ leagueData, onUpdat
   const fetchUsers = async () => {
     setLoading(true);
     setIsOffline(false);
+
+    const token = localStorage.getItem('vleague_token');
+
     try {
-      const res = await fetch('http://localhost:3000/api/users');
-      if (!res.ok) throw new Error('API Error');
+      const res = await fetch('/api/users', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!res.ok) {
+        const msg = await res.text().catch(() => '');
+        throw new Error(`API Error: ${res.status} ${msg}`);
+      }
+
       const data = await res.json();
       setUsers(data);
       localStorage.setItem('vleague_user_registry_backup', JSON.stringify(data));
     } catch (err) {
-      console.warn("Using local user registry fallback");
+      console.warn("Using local user registry fallback", err);
       setIsOffline(true);
+
       const localUsersJson = localStorage.getItem('vleague_local_users');
       const registryBackupJson = localStorage.getItem('vleague_user_registry_backup');
       let combinedUsers: User[] = [];
@@ -62,16 +73,28 @@ const UserManagementPage: React.FC<UserManagementProps> = ({ leagueData, onUpdat
       alert('Chỉ Ban điều hành giải mới có thể thay đổi quyền của người dùng!');
       return;
     }
-    
+
+    const token = localStorage.getItem('vleague_token');
+
     try {
-      const res = await fetch(`http://localhost:3000/api/users/${userId}/role`, {
+      const res = await fetch(`/api/users/${userId}/role`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ role: newRole })
       });
-      if (!res.ok) throw new Error('API Error');
+
+      if (!res.ok) {
+        const msg = await res.text().catch(() => '');
+        throw new Error(`API Error: ${res.status} ${msg}`);
+      }
+
       fetchUsers();
     } catch (err) {
+      // NOTE: Fallback này sẽ cho đổi role ở local, ngay cả khi server từ chối (ví dụ token hết hạn).
+      // Nếu muốn "đúng kiến trúc" chặt chẽ hơn, bạn nên bỏ fallback này hoặc chỉ fallback khi offline thật sự.
       const updated = users.map(u => u.id === userId ? { ...u, role: newRole } : u);
       setUsers(updated);
       const localUsersJson = localStorage.getItem('vleague_local_users');
