@@ -1,20 +1,18 @@
-
-import { UserRole, User } from '../types';
-import { ChevronDown, ShieldHalf, Loader2, AlertCircle, Calendar as CalendarIcon, Eye, EyeOff } from 'lucide-react';
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
+import { User, UserRole } from '../types';
+import {
+  ChevronDown,
+  ShieldHalf,
+  Loader2,
+  AlertCircle,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 
 interface RegisterPageProps {
   onBack: () => void;
   onRegisterSuccess: (user: any) => void;
 }
-
-// Hàm băm SHA-256
-const hashPassword = async (password: string) => {
-  const msgUint8 = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-};
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }) => {
   const [form, setForm] = useState({
@@ -24,12 +22,14 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }
     birthday: '',
     role: UserRole.VIEWER,
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
+
   const [roleOpen, setRoleOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const birthdayInputRef = useRef<HTMLInputElement>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -40,10 +40,11 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }
   };
 
   const handleOpenPicker = () => {
+    // optional helper; safe on browsers that support it
     if (birthdayInputRef.current && 'showPicker' in birthdayInputRef.current) {
       try {
         (birthdayInputRef.current as any).showPicker();
-      } catch (e) {
+      } catch {
         birthdayInputRef.current.focus();
       }
     } else {
@@ -55,7 +56,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }
     e.preventDefault();
     setError('');
 
-    if (Object.values(form).some(v => v === '')) {
+    if (Object.values(form).some((v) => v === '')) {
       setError('Vui lòng điền đầy đủ tất cả thông tin');
       return;
     }
@@ -69,61 +70,35 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }
     }
 
     setLoading(true);
-    const hashedPassword = await hashPassword(form.password);
 
     try {
-      const res = await fetch('/api/auth/register', ..., {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          password: hashedPassword,
-          confirmPassword: hashedPassword
-        })
+        body: JSON.stringify(form),
       });
-      const data = await res.json();
-      if (data.success) {
-        onRegisterSuccess(data.user);
-      } else {
+
+      const data = await res.json().catch(() => ({} as any));
+
+      if (!res.ok || !data.success) {
         setError(data.error || 'Lỗi đăng ký tài khoản');
-        setLoading(false);
-      }
-    } catch (err) {
-      console.warn("Backend not reachable, saving to local storage instead.");
-      
-      const localUsersJson = localStorage.getItem('vleague_local_users');
-      const localUsers: User[] = localUsersJson ? JSON.parse(localUsersJson) : [];
-      
-      if (localUsers.some(u => u.username === form.username)) {
-        setError('Tên tài khoản đã tồn tại trong hệ thống nội bộ!');
-        setLoading(false);
         return;
       }
 
-      const newUser: User = {
-        id: Date.now().toString(), // Safe fallback ID
-        username: form.username,
-        password: hashedPassword, 
-        fullName: form.fullName,
-        email: form.email,
-        birthday: form.birthday,
-        role: form.role
-      };
+      // nếu backend trả token sau khi register thì lưu luôn
+      if (data.token) localStorage.setItem('vleague_token', data.token);
 
-      localUsers.push(newUser);
-      localStorage.setItem('vleague_local_users', JSON.stringify(localUsers));
-      
-      setTimeout(() => {
-        onRegisterSuccess(newUser);
-        setLoading(false);
-      }, 800);
+      onRegisterSuccess(data.user);
+    } catch (err) {
+      setError('Không thể kết nối tới máy chủ. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-emerald-50 p-6">
       <div className="max-w-5xl w-full bg-white rounded-[40px] shadow-2xl shadow-emerald-900/10 overflow-hidden flex flex-col md:flex-row min-h-[600px]">
-
         {/* Left: Welcome area */}
         <div className="flex-1 bg-gradient-to-br from-emerald-600 to-emerald-700 p-12 flex flex-col items-center justify-center text-center text-white relative">
           <div className="absolute top-10 left-10 opacity-20">
@@ -145,9 +120,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }
 
         {/* Right: Registration form */}
         <div className="flex-[1.5] p-12 overflow-y-auto max-h-[95vh] scrollbar-hide">
-          <h1 className="text-3xl font-black text-emerald-900 mb-2">
-            Tạo tài khoản
-          </h1>
+          <h1 className="text-3xl font-black text-emerald-900 mb-2">Tạo tài khoản</h1>
           <p className="text-emerald-500 font-medium mb-8 text-sm opacity-70">
             Điền thông tin cá nhân để kích hoạt quyền truy cập.
           </p>
@@ -161,29 +134,56 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }
             )}
 
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest px-1">Tên tài khoản</label>
-              <input type="text" placeholder="Nhập tên tài khoản" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} className="w-full px-4 py-3 bg-emerald-50/50 border border-emerald-100 rounded-xl outline-none text-emerald-900 focus:ring-2 focus:ring-emerald-500/20 font-medium" />
+              <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest px-1">
+                Tên tài khoản
+              </label>
+              <input
+                type="text"
+                placeholder="Nhập tên tài khoản"
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
+                className="w-full px-4 py-3 bg-emerald-50/50 border border-emerald-100 rounded-xl outline-none text-emerald-900 focus:ring-2 focus:ring-emerald-500/20 font-medium"
+              />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest px-1">Họ và tên</label>
-              <input type="text" placeholder="Nhập họ và tên" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} className="w-full px-4 py-3 bg-emerald-50/50 border border-emerald-100 rounded-xl outline-none text-emerald-900 focus:ring-2 focus:ring-emerald-500/20 font-medium" />
+              <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest px-1">
+                Họ và tên
+              </label>
+              <input
+                type="text"
+                placeholder="Nhập họ và tên"
+                value={form.fullName}
+                onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                className="w-full px-4 py-3 bg-emerald-50/50 border border-emerald-100 rounded-xl outline-none text-emerald-900 focus:ring-2 focus:ring-emerald-500/20 font-medium"
+              />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest px-1">Email</label>
-              <input type="email" placeholder="example@email.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full px-4 py-3 bg-emerald-50/50 border border-emerald-100 rounded-xl outline-none text-emerald-900 focus:ring-2 focus:ring-emerald-500/20 font-medium" />
+              <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest px-1">
+                Email
+              </label>
+              <input
+                type="email"
+                placeholder="example@email.com"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full px-4 py-3 bg-emerald-50/50 border border-emerald-100 rounded-xl outline-none text-emerald-900 focus:ring-2 focus:ring-emerald-500/20 font-medium"
+              />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest px-1">Ngày sinh</label>
+              <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest px-1">
+                Ngày sinh
+              </label>
               <div className="relative">
                 <input
                   ref={birthdayInputRef}
                   type="date"
                   value={form.birthday}
-                  onChange={e => setForm({ ...form, birthday: e.target.value })}
+                  onChange={(e) => setForm({ ...form, birthday: e.target.value })}
                   className="w-full px-4 py-3 bg-emerald-50/50 border border-emerald-100 rounded-xl outline-none text-emerald-900 focus:ring-2 focus:ring-emerald-500/20 font-medium cursor-text"
+                  onClick={handleOpenPicker}
                 />
               </div>
             </div>
@@ -196,7 +196,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }
               {/* Trigger */}
               <button
                 type="button"
-                onClick={() => setRoleOpen(v => !v)}
+                onClick={() => setRoleOpen((v) => !v)}
                 className="
                   w-full px-4 py-3 rounded-xl border
                   bg-emerald-50/50 border-emerald-100
@@ -211,11 +211,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }
                   {form.role === UserRole.ADMIN && 'Ban điều hành giải'}
                 </span>
 
-                <ChevronDown
-                  className={`w-5 h-5 transition-transform ${
-                    roleOpen ? 'rotate-180' : ''
-                  }`}
-                />
+                <ChevronDown className={`w-5 h-5 transition-transform ${roleOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Dropdown */}
@@ -232,8 +228,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }
                 {[
                   { label: 'Người xem', value: UserRole.VIEWER },
                   { label: 'Chủ đội bóng', value: UserRole.TEAM_OWNER },
-                  { label: 'Ban điều hành giải', value: UserRole.ADMIN }
-                ].map(opt => (
+                  { label: 'Ban điều hành giải', value: UserRole.ADMIN },
+                ].map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
@@ -258,20 +254,18 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }
                 Mật khẩu
               </label>
 
-              <div className="relative"> {/* relative only for input */}
+              <div className="relative">
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="Tối thiểu 8 ký tự"
                   value={form.password}
-                  onChange={e => setForm({ ...form, password: e.target.value })}
-                  className="w-full pl-4 pr-12 py-3 bg-emerald-50/50 border border-emerald-100
-                            rounded-xl outline-none text-emerald-900
-                            focus:ring-2 focus:ring-emerald-500/20 font-medium"
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="w-full pl-4 pr-12 py-3 bg-emerald-50/50 border border-emerald-100 rounded-xl outline-none text-emerald-900 focus:ring-2 focus:ring-emerald-500/20 font-medium"
                 />
 
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-emerald-700 hover:text-emerald-900 bg-emerald-200 rounded-lg border border-emerald-300 shadow-sm"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -286,33 +280,25 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onRegisterSuccess }
 
               <div className="relative">
                 <input
-                  type={showConfirmPassword ? "text" : "password"}
+                  type={showConfirmPassword ? 'text' : 'password'}
                   value={form.confirmPassword}
-                  onChange={e =>
-                    setForm({ ...form, confirmPassword: e.target.value })
-                  }
-                  className="w-full pl-4 pr-12 py-3 bg-emerald-50/50 border border-emerald-100
-                            rounded-xl outline-none text-emerald-900
-                            focus:ring-2 focus:ring-emerald-500/20 font-medium"
+                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                  className="w-full pl-4 pr-12 py-3 bg-emerald-50/50 border border-emerald-100 rounded-xl outline-none text-emerald-900 focus:ring-2 focus:ring-emerald-500/20 font-medium"
                 />
 
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2
-                            text-emerald-700 hover:text-emerald-900
-                            bg-emerald-200 rounded-lg border border-emerald-300 shadow-sm"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-emerald-700 hover:text-emerald-900 bg-emerald-200 rounded-lg border border-emerald-300 shadow-sm"
                 >
-                  {showConfirmPassword
-                    ? <EyeOff className="w-4 h-4" />
-                    : <Eye className="w-4 h-4" />
-                  }
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
             <div className="col-span-2 pt-6">
               <button
+                type="submit"
                 disabled={loading}
                 className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
               >

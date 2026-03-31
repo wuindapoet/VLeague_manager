@@ -24,14 +24,11 @@ router.post('/register', async (req, res) => {
     }
 
     const exists = await User.findOne({ username });
-    if (exists) {
-      return res.status(409).json({ success: false, error: 'Tên tài khoản đã tồn tại' });
-    }
+    if (exists) return res.status(409).json({ success: false, error: 'Tên tài khoản đã tồn tại' });
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await User.create({ username, fullName, email, birthday, role, passwordHash });
 
-    // nếu muốn auto login
     const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
     return res.json({ success: true, user: user.toJSON(), token });
@@ -50,16 +47,13 @@ router.post('/login', async (req, res) => {
     }
 
     const user = await User.findOne({ username });
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
-    }
+    if (!user) return res.status(401).json({ success: false, error: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
 
     const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) {
-      return res.status(401).json({ success: false, error: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
-    }
+    if (!ok) return res.status(401).json({ success: false, error: 'Tên đăng nhập hoặc mật khẩu không chính xác' });
 
     const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+
     return res.json({ success: true, user: user.toJSON(), token });
   } catch (e) {
     console.error(e);
